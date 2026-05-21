@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cost Of Goods Sold KDMP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+<div x-data="kalkulatorApp()" x-init="init()" class="min-h-screen pb-10">
+    <!-- Header -->
+    <div class="bg-indigo-600 text-white p-6 shadow-md rounded-b-2xl">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-2xl font-bold tracking-tight"><i class="fas fa-ruler-combined mr-2"></i> BOM KDMP Calculator</h1>
+            <p class="text-indigo-200 text-sm mt-1">Hitung HPP, Harga Jual, & Kebutuhan Belanja KDMP</p>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- KOLOM KIRI -->
+        <div class="md:col-span-2 space-y-6">
+            
+            <!-- Card Database Bahan -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                    <h2 class="font-bold text-lg text-slate-700">Database Kebutuhan (1 Titik)</h2>
+                    <button @click="openForm()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                        <i class="fas fa-plus mr-1"></i> Tambah
+                    </button>
+                </div>
+                
+                <div class="p-5">
+                    <div x-show="items.length === 0" class="text-center py-8 text-slate-400">
+                        <i class="fas fa-box-open text-4xl mb-3"></i>
+                        <p>Belum ada bahan. Klik tombol "Tambah" untuk memulai.</p>
+                    </div>
+
+                    <!-- PERBAIKAN: Menambahkan index pada x-for -->
+                    <template x-for="(item, index) in items" :key="item.id">
+                        <div class="flex items-center justify-between py-3 border-b border-slate-50 hover:bg-slate-50 px-2 rounded transition">
+                            <div class="flex-1">
+                                <p class="font-semibold text-slate-700" x-text="item.nama"></p>
+                                <p class="text-sm text-slate-500">
+                                    <span x-text="item.qty"></span> x Rp <span x-text="formatUang(item.harga)"></span> = 
+                                    <span class="font-medium text-slate-700">Rp <span x-text="formatUang(item.qty * item.harga)"></span></span>
+                                </p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <!-- PERBAIKAN: Mengirim index ke fungsi -->
+                                <button @click="editItem(index)" class="text-blue-500 hover:text-blue-700 p-2"><i class="fas fa-edit"></i></button>
+                                <button @click="deleteItem(index)" class="text-red-500 hover:text-red-700 p-2"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Card Pengaturan Pabrikasi -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <h2 class="font-bold text-lg text-slate-700 mb-4">Pengaturan Pabrikasi</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Jumlah Titik</label>
+                        <input type="number" x-model.number="titik" min="1" class="w-full border-slate-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-2 px-3 border" placeholder="Cth: 10">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Margin Keuntungan (%)</label>
+                        <input type="number" x-model.number="margin" min="0" class="w-full border-slate-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-2 px-3 border" placeholder="Cth: 30">
+                    </div>
+                </div>
+                
+                <div class="mt-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-slate-500">HPP per Titik</p>
+                            <p class="text-xl font-bold text-slate-800">Rp <span x-text="formatUang(hppPerTitik)"></span></p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500">Harga Jual per Titik</p>
+                            <p class="text-xl font-bold text-emerald-600">Rp <span x-text="formatUang(hargaJual)"></span></p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500">Total Modal (<span x-text="titik"></span> Titik)</p>
+                            <p class="text-lg font-bold text-slate-800">Rp <span x-text="formatUang(totalModal)"></span></p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500">Estimasi Profit</p>
+                            <p class="text-lg font-bold text-emerald-600">Rp <span x-text="formatUang(totalProfit)"></span></p>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-red-200 bg-red-50 -m-4 p-4 rounded-b-lg">
+                        <p class="text-red-500 font-semibold text-sm"><i class="fas fa-exclamation-triangle mr-1"></i> Harga Tidak Disarankan (Margin <10%):</p>
+                        <p class="text-red-700 font-bold text-lg">Rp <span x-text="formatUang(hargaBahaya)"></span> / Titik</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Shopping List Real-time -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <h2 class="font-bold text-lg text-slate-700 mb-4"><i class="fas fa-shopping-cart text-indigo-500 mr-2"></i>Kebutuhan Belanja (<span x-text="titik"></span> Titik)</h2>
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-slate-600 text-sm">
+                            <th class="pb-2">Bahan</th>
+                            <th class="pb-2 text-right">Qty Dibutuhkan</th>
+                            <th class="pb-2 text-right">Total Harga Beli</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="item in items" :key="item.id">
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="py-3 font-medium" x-text="item.nama"></td>
+                                <td class="py-3 text-right font-bold text-indigo-600" x-text="(item.qty * titik).toLocaleString('id-ID') + ' pcs'"></td>
+                                <td class="py-3 text-right" x-text="'Rp ' + formatUang(item.qty * titik * item.harga)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                <button @click="simpanRiwayat()" class="mt-6 w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg transition shadow-sm">
+                    <i class="fas fa-save mr-2"></i> Simpan ke Riwayat Perhitungan
+                </button>
+            </div>
+        </div>
+
+        <!-- KOLOM KANAN: Riwayat -->
+        <div class="md:col-span-1">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sticky top-6">
+                <h2 class="font-bold text-lg text-slate-700 mb-4"><i class="fas fa-history text-slate-400 mr-2"></i>Riwayat</h2>
+                <div x-show="history.length === 0" class="text-center py-4 text-slate-400 text-sm">
+                    Belum ada riwayat hitung.
+                </div>
+                <div class="space-y-3 max-h-[600px] overflow-y-auto">
+                    <!-- PERBAIKAN: Menambahkan index pada x-for riwayat -->
+                    <template x-for="(h, hIndex) in history" :key="h.id">
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-sm relative group">
+                            <button @click="hapusRiwayat(hIndex)" class="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition text-xs"><i class="fas fa-times"></i></button>
+                            <p class="font-semibold text-slate-700"><span x-text="h.titik"></span> Titik</p>
+                            <p class="text-slate-500 text-xs mb-1" x-text="h.waktu"></p>
+                            <div class="flex justify-between text-xs mt-2 border-t border-slate-200 pt-2">
+                                <span>Modal: <span class="font-medium" x-text="'Rp ' + formatUang(h.modal)"></span></span>
+                            </div>
+                            <div class="flex justify-between text-xs text-emerald-600 font-bold mt-1">
+                                <span>Profit: <span x-text="'Rp ' + formatUang(h.profit)"></span></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL FORM TAMBAH/EDIT BAHAN -->
+    <div x-show="isFormOpen" x-transition.opacity class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeForm()">
+        <div x-show="isFormOpen" x-transition class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4" x-text="isEditing ? 'Edit Bahan' : 'Tambah Bahan Baru'"></h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Nama Bahan</label>
+                    <input type="text" x-model="form.nama" class="w-full border-slate-300 rounded-lg shadow-sm py-2 px-3 border" placeholder="Cth: Sealant / Alumunium">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Qty (1 Titik)</label>
+                        <input type="number" x-model.number="form.qty" class="w-full border-slate-300 rounded-lg shadow-sm py-2 px-3 border" placeholder="7">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Harga Satuan (Rp)</label>
+                        <input type="number" x-model.number="form.harga" class="w-full border-slate-300 rounded-lg shadow-sm py-2 px-3 border" placeholder="15000">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button @click="closeForm()" class="flex-1 border border-slate-300 text-slate-600 font-semibold py-2 rounded-lg hover:bg-slate-50 transition">Batal</button>
+                <button @click="saveItem()" class="flex-1 bg-indigo-600 text-white font-semibold py-2 rounded-lg hover:bg-indigo-700 transition">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function kalkulatorApp() {
+    return {
+        items: [],
+        history: [],
+        isFormOpen: false,
+        isEditing: false,
+        editIndex: null, // Kita kembali pakai editIndex untuk kejelasan state
+        form: { id: null, nama: '', qty: '', harga: '' },
+        titik: 1,
+        margin: 30,
+
+        init() {
+            const savedItems = localStorage.getItem('kdmp_items_v4');
+            if(savedItems) this.items = JSON.parse(savedItems);
+
+            const savedHistory = localStorage.getItem('kdmp_history_v4');
+            if(savedHistory) this.history = JSON.parse(savedHistory);
+            
+            // Pastikan semua data punya ID unik
+            this.items.forEach(item => { if(!item.id) item.id = Date.now() + Math.random(); });
+            this.history.forEach(h => { if(!h.id) h.id = Date.now() + Math.random(); });
+        },
+
+        get hppPerTitik() {
+            return this.items.reduce((sum, item) => sum + (item.qty * item.harga), 0);
+        },
+        get hargaJual() {
+            return this.hppPerTitik + (this.hppPerTitik * (this.margin / 100));
+        },
+        get hargaBahaya() {
+            return this.hppPerTitik + (this.hppPerTitik * 0.10);
+        },
+        get totalModal() {
+            return this.hppPerTitik * this.titik;
+        },
+        get totalProfit() {
+            return (this.hargaJual - this.hppPerTitik) * this.titik;
+        },
+
+        openForm() {
+            this.isFormOpen = true;
+            this.isEditing = false;
+            this.editIndex = null;
+            this.form = { id: null, nama: '', qty: '', harga: '' };
+        },
+        closeForm() {
+            this.isFormOpen = false;
+        },
+        
+        editItem(index) {
+            this.isFormOpen = true;
+            this.isEditing = true;
+            this.editIndex = index;
+            this.form = { ...this.items[index] }; 
+        },
+        
+        saveItem() {
+            if(!this.form.nama || !this.form.qty || !this.form.harga) {
+                alert('Mohon lengkapi semua data bahan!');
+                return;
+            }
+            if(this.isEditing && this.editIndex !== null) {
+                // PERBAIKAN UTAMA: Gunakan splice untuk memaksa Alpine merefresh array
+                this.form.id = this.items[this.editIndex].id; // Pertahankan ID lama
+                this.items.splice(this.editIndex, 1, { ...this.form });
+            } else {
+                this.form.id = Date.now(); 
+                this.items.push({ ...this.form });
+            }
+            this.saveToLocal();
+            this.closeForm();
+        },
+        
+        deleteItem(index) {
+            if(confirm('Hapus bahan ' + this.items[index].nama + '?')) {
+                // PERBAIKAN UTAMA: Gunakan splice untuk menghapus, ini paling stabil di Alpine
+                this.items.splice(index, 1);
+                this.saveToLocal();
+            }
+        },
+        
+        saveToLocal() {
+            localStorage.setItem('kdmp_items_v4', JSON.stringify(this.items));
+        },
+
+        simpanRiwayat() {
+            if(this.items.length === 0) {
+                alert('Tambahkan bahan terlebih dahulu!');
+                return;
+            }
+            const now = new Date();
+            const waktu = now.toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) + ' ' + now.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+            
+            this.history.unshift({
+                id: Date.now(), 
+                waktu: waktu,
+                titik: this.titik,
+                modal: this.totalModal,
+                profit: this.totalProfit
+            });
+
+            localStorage.setItem('kdmp_history_v4', JSON.stringify(this.history));
+            alert('Perhitungan berhasil disimpan ke riwayat!');
+        },
+        
+        hapusRiwayat(index) {
+            // PERBAIKAN UTAMA: Gunakan splice
+            this.history.splice(index, 1);
+            localStorage.setItem('kdmp_history_v4', JSON.stringify(this.history));
+        },
+
+        formatUang(number) {
+            return Math.round(number).toLocaleString('id-ID');
+        }
+    }
+}
+</script>
+
+</body>
+</html>
